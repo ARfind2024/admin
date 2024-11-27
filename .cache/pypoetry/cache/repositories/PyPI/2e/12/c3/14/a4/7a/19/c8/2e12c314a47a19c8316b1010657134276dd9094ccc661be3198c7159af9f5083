@@ -1,0 +1,1 @@
+9999999999{"name": "modelo", "version": "0.0.3", "summary": "Simple models independent of SQL/ORM.", "requires_dist": null, "requires_python": null, "files": [{"file": "modelo-0.0.3.tar.gz", "hash": "sha256:ffa390a753adda56a0d8aadf4be913c696c47e6221fddb7d322e653bffa4aea8"}], "yanked": false, "_cache_version": "2.0.0"}

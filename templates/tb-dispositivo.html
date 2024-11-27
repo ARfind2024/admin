@@ -1,0 +1,51 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+{% block content %}
+<div class="row mb-2">
+    <h1 class="h3 col-10">Dispositivos</h1>
+    <a href="{{ url_for('agregar_dispositivo') }}" class="btn btn-success col-2">Agregar Dispositivo</a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Fecha de Creación</th>
+                        <th>Número Telefónico</th>
+                        <th>Plan ID</th>
+                        <th>Usuario ID</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dispositivo in dispositivos %}
+                        <tr>
+                            <td>
+                                {% if dispositivo.fecha_creacion %}
+                                    {% if dispositivo.fecha_creacion._seconds is defined %}
+                                        {{ dispositivo.fecha_creacion._seconds | timestamp_to_datetime }}
+                                    {% else %}
+                                        {{ dispositivo.fecha_creacion | default('N/A') }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>{{ dispositivo.numero_telefonico }}</td>
+                            <td>{{ dispositivo.plan_id if dispositivo.plan_id else 'N/A' }}</td>
+                            <td>{{ dispositivo.usuario_id if dispositivo.usuario_id else 'N/A' }}</td>
+                            <td>
+                                <a href="{{ url_for('modificar_dispositivo', id_dispositivo=dispositivo.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                <form action="{{ url_for('eliminar_dispositivo', id_dispositivo=dispositivo.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este dispositivo?')">Borrar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

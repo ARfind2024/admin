@@ -1,0 +1,45 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+
+{% block content %}
+<h2>Agregar Empleado</h2>
+<div class="container mt-2 card p-3">
+    <!-- Mostrar el mensaje de error si existe -->
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('agregar_empleado') }}" method="post">
+        <!-- Campo para el nombre del empleado -->
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre del Empleado:</label>
+            <input type="text" class="form-control" id="nombre" name="nombre" required>
+        </div>
+
+        <!-- Campo para el correo del empleado -->
+        <div class="mb-3">
+            <label for="correo" class="form-label">Correo Electrónico:</label>
+            <input type="email" class="form-control" id="correo" name="correo" required>
+        </div>
+
+        <!-- Campo para la contraseña del empleado -->
+        <div class="mb-3">
+            <label for="password" class="form-label">Contraseña:</label>
+            <input type="password" class="form-control" id="password" name="password" minlength="6" required>
+        </div>
+
+        <!-- Campo para el rol del empleado -->
+        <div class="mb-3">
+            <label for="is_admin" class="form-label">Rol:</label>
+            <select class="form-control" id="is_admin" name="is_admin" required>
+                <option value="true">Administrador</option>
+                <option value="false">Empleado</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-success">Agregar Empleado</button>
+    </form>
+</div>
+
+{% endblock %}

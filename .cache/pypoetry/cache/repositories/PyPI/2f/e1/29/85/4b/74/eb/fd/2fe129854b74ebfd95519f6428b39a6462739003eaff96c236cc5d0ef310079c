@@ -1,0 +1,1 @@
+9999999999{"name": "sala", "version": "1.3", "summary": "Encrypted plaintext password store", "requires_dist": null, "requires_python": null, "files": [{"file": "sala-1.3.tar.gz", "hash": "sha256:28feae15094aa8ff029bd1bd2bc67acac16be948d4652cd1c50c281107ab0f8f"}], "yanked": false, "_cache_version": "2.0.0"}

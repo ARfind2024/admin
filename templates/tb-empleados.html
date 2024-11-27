@@ -1,0 +1,39 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+{% block content %}
+<div class="row mb-2">
+    <h1 class="h3 col-10">Empleados</h1>
+    <a href="{{ url_for('agregar_empleado') }}" class="btn btn-success col-2">Agregar Empleado</a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empleado in empleados %}
+                        <tr>
+                            <td>{{ empleado.nombre }}</td>
+                            <td>{{ empleado.email if empleado.email else 'N/A' }}</td>
+                            <td>{{ 'Admin' if empleado.is_admin else 'Empleado' }}</td>
+                            <td>
+                                <a href="{{ url_for('modificar_empleado', id_empleado=empleado.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                <form action="{{ url_for('eliminar_empleado', id_empleado=empleado.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este empleado?')">Borrar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

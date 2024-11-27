@@ -1,0 +1,70 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+{% block content %}
+
+<h2>Editar Dispositivo</h2>
+<div class="container mt-2 card p-3">
+    <form action="{{ url_for('modificar_dispositivo', id_dispositivo=dispositivo['id']) }}" method="post">
+        <div class="mb-3">
+            <label for="apodo" class="form-label">Apodo:</label>
+            <input type="text" class="form-control" id="apodo" name="apodo" value="{{ dispositivo.get('apodo', 'N/A') }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="bateria" class="form-label">Batería (%):</label>
+            <input type="number" class="form-control" id="bateria" name="bateria" value="{{ dispositivo.get('bateria', 'N/A') }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="codigo_invitado" class="form-label">Código Invitado:</label>
+            <input type="text" class="form-control" id="codigo_invitado" name="codigo_invitado" value="{{ dispositivo.get('codigo_invitado', 'N/A') }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="numero_telefonico" class="form-label">Número Telefónico:</label>
+            <input type="text" class="form-control" id="numero_telefonico" name="numero_telefonico" value="{{ dispositivo.get('numero_telefonico', '') }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="plan_id" class="form-label">Plan ID:</label>
+            <input type="text" class="form-control" id="plan_id" name="plan_id" value="{{ dispositivo.get('plan_id', 'N/A') }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="usuario_id" class="form-label">Usuario ID:</label>
+            <input type="text" class="form-control" id="usuario_id" name="usuario_id" value="{{ dispositivo.get('usuario_id', 'N/A') }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="ubicacion" class="form-label">Ubicación:</label>
+            <input type="text" class="form-control" id="ubicacion" name="ubicacion" value="{{ dispositivo.get('ubicacion', 'N/A') }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="usuarios_invitados" class="form-label">Usuarios Invitados:</label>
+            <textarea class="form-control" id="usuarios_invitados" name="usuarios_invitados" rows="3" disabled>{{ dispositivo.get('usuarios_invitados', []) | join(', ') }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="ult_actualizacion" class="form-label">Última Actualización:</label>
+            <input type="text" class="form-control" id="ult_actualizacion" name="ult_actualizacion" value="{{ dispositivo.get('ult_actualizacion', 'N/A') }}" disabled>
+        </div>
+        <div class="mb-3">
+            <label for="fecha_creacion" class="form-label">Fecha de Creación:</label>
+            <input type="text" class="form-control" id="fecha_creacion" name="fecha_creacion" value="{{ dispositivo.get('fecha_creacion', 'N/A') }}" disabled>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </form>
+</div>
+    <script>
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form)
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = "{{ url_for('dispositivos') }}";
+            } else {
+                alert('Error al guardar los cambios');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+</script>
+
+{% endblock %}

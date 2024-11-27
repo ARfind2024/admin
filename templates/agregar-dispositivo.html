@@ -1,0 +1,24 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+{% block content %}
+
+<h2>Agregar Dispositivo</h2>
+<div class="container mt-2 card p-3">
+    <form action="{{ url_for('agregar_dispositivo') }}" method="post">
+        <div class="mb-3">
+            <label for="numero_telefonico" class="form-label">Número Telefónico:</label>
+            <input type="text" class="form-control" id="numero_telefonico" name="numero_telefonico" required>
+        </div>
+        <div class="mb-3">
+            <label for="tipo_producto" class="form-label">Tipo de Producto:</label>
+            <select class="form-control" id="tipo_producto" name="tipo_producto" required>
+                <option value="" disabled selected>Seleccione un tipo de producto</option>
+                {% for producto in productos %}
+                    <option value="{{ producto['id'] }}">{{ producto['titulo'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">Agregar Dispositivo</button>
+    </form>
+</div>
+
+{% endblock %}

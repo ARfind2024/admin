@@ -1,0 +1,321 @@
+.panel-home,
+.panel-home * {
+  box-sizing: border-box;
+}
+.panel-home {
+  background: #ffffff;
+  width: 1353px;
+  height: 688px;
+  position: relative;
+  overflow: hidden;
+}
+.rectangle-245 {
+ background: #0486FF !important;
+  width: 1064px;
+  height: 74px;
+  position: absolute;
+  left: 289px;
+  top: 0px;
+}
+.rectangle-246 {
+  background: #f0f0f0;
+  width: 1064px;
+  height: 614px;
+  position: absolute;
+  left: 289px;
+  top: 74px;
+}
+.home {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: left;
+  font: 400 24px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 314px;
+  top: 26px;
+  width: 1126px;
+}
+.menuhb {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  height: 688px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+}
+.frame-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: relative;
+}
+.rectangle-243 {
+  background: #0486FF !important;
+  flex-shrink: 0;
+  width: 289px;
+  height: 74px;
+  position: relative;
+}
+.perfil {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: absolute;
+  left: 25px;
+  top: 12px;
+}
+.rectangle-251 {
+  background: #d9d9d9;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  position: relative;
+}
+.titulo {
+  color: rgba(0, 0, 0, 0.75);
+  text-align: left;
+  font: 400 36px "Righteous-Regular", sans-serif;
+  position: relative;
+}
+.frame-160 {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: relative;
+}
+.frame-159 {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: relative;
+}
+.rectangle-244 {
+  background: #f0f0f0;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.2);
+  border-width: 0px 1px 0px 0px;
+  flex-shrink: 0;
+  width: 289px;
+  height: 736px;
+  position: relative;
+  box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.5);
+}
+.boton {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 262px;
+  position: absolute;
+  left: 27px;
+  top: 37px;
+}
+.rectangle-249 {
+  background: #d9d9d9;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  position: relative;
+}
+.titulo2 {
+  color: rgba(0, 0, 0, 0.7);
+  text-align: left;
+  font: 400 24px "Righteous-Regular", sans-serif;
+  position: relative;
+}
+.frame-158 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: absolute;
+  left: 0px;
+  top: 96px;
+}
+.rectangle-250 {
+  background: #f0f0f0;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.1);
+  border-width: 1px 0px 1px 0px;
+  flex-shrink: 0;
+  width: 288px;
+  height: 281px;
+  position: relative;
+}
+.frame-157 {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: absolute;
+  left: 26px;
+  top: 40px;
+}
+.boton2 {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 262px;
+  position: relative;
+}
+.frame-153 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: absolute;
+  left: 345px;
+  top: 122px;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+.rectangle-289 {
+  background: #ffffff;
+  border-radius: 10px;
+  flex-shrink: 0;
+  width: 300px;
+  height: 140px;
+  position: relative;
+}
+.rectangle-290 {
+  background: #0486FF !important;
+  border-radius: 10px 10px 0px 0px;
+  flex-shrink: 0;
+  width: 300px;
+  height: 8px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+}
+.rectangle-291 {
+  background: #d9d9d9;
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  position: absolute;
+  left: 13px;
+  top: 24px;
+}
+.comprar {
+  color: #1c1c1c;
+  text-align: left;
+  font: 400 20px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 140px;
+  top: 24px;
+}
+.comprar-una-entrada-de-cine-es-un-proceso-r-pido-y-conveniente {
+  color: rgba(0, 0, 0, 0.7);
+  text-align: left;
+  font: 400 12px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 140px;
+  top: 55px;
+  width: 147px;
+  height: 57px;
+}
+.icons-8-billete-combinado-100-2 {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  position: absolute;
+  left: 31px;
+  top: 42px;
+}
+.frame-156 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: absolute;
+  left: 1009px;
+  top: 122px;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+.ventas {
+  color: #1c1c1c;
+  text-align: left;
+  font: 400 20px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 140px;
+  top: 24px;
+}
+.este-proceso-de-ventas-garantiza-que-los-clientes-obtengan-los-productos-que-desean {
+  color: rgba(0, 0, 0, 0.7);
+  text-align: left;
+  font: 400 12px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 140px;
+  top: 55px;
+  width: 147px;
+  height: 57px;
+}
+.icons-8-anal-tica-90-1 {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  position: absolute;
+  left: 35px;
+  top: 38px;
+}
+.frame-155 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: absolute;
+  left: 677px;
+  top: 122px;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+.promociones {
+  color: #1c1c1c;
+  text-align: left;
+  font: 400 20px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 140px;
+  top: 24px;
+}
+.realizar-una-compra-con-promociones-implica-aprovechar-ofertas-especiales-o-descuentos {
+  color: rgba(0, 0, 0, 0.7);
+  text-align: left;
+  font: 400 12px "Righteous-Regular", sans-serif;
+  position: absolute;
+  left: 140px;
+  top: 55px;
+  width: 147px;
+  height: 57px;
+}
+.icons-8-descuento-100-1 {
+  flex-shrink: 0;
+  width: 62px;
+  height: 62px;
+  position: absolute;
+  left: 32px;
+  top: 43px;
+}

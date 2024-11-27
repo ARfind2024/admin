@@ -1,0 +1,31 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+
+{% block content %}
+<h2>Agregar Producto</h2>
+<div class="container mt-2 card p-3">
+    <form action="{{ url_for('agregar_producto') }}" method="post">
+        <div class="mb-3">
+            <label for="titulo" class="form-label">Título:</label>
+            <input type="text" class="form-control" id="titulo" name="titulo" required>
+        </div>
+        <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción:</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="precio" class="form-label">Precio:</label>
+            <input type="number" class="form-control" id="precio" name="precio" required>
+        </div>
+        <div class="mb-3">
+            <label for="imagen" class="form-label">URL de la Imagen:</label>
+            <input type="text" class="form-control" id="imagen" name="imagen">
+        </div>
+        <div class="mb-3">
+            <label for="tinyDescripcion" class="form-label">Descripción Breve:</label>
+            <textarea class="form-control" id="tinyDescripcion" name="tinyDescripcion" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Agregar Producto</button>
+    </form>
+</div>
+
+{% endblock %}

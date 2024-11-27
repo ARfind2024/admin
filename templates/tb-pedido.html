@@ -1,0 +1,42 @@
+{% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
+{% block content %}
+
+    <div class="row mb-2">
+        <h1 class="h3 col-10">Pedidos</h1>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Items</th>
+                            <th>Estado</th>
+                            <th>Fecha de Creación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pedidos %}
+                            <tr>
+                                <td>{{ pedido.userId }}</td>
+                                <td>{{ pedido.prod }}</td>
+                                <td>{{ pedido.status }}</td>
+                                <td>{{ pedido.createdAt }}</td>
+                                <td>
+                                    <a href="{{ url_for('modificar_pedido', id_pedido=pedido.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                    <form action="{{ url_for('eliminar_pedido', id_pedido=pedido.id) }}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este pedido?')">Borrar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
