@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 import os
 from functools import wraps
 from datetime import datetime
+from firebase_admin import storage
+from PIL import Image
+import io
 
 
 # Importar configuraciones
@@ -28,10 +31,13 @@ if not firebase_admin._apps:
         "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT"),
         "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT"),
     })
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred, {
+        "storageBucket": "arfind.appspot.com"
+    })
 
 # Inicializar cliente Firestore
 db = firestore.client()
+bucket = storage.bucket()
 
 # Configurar API Client
 def get_authorization_headers():
@@ -410,12 +416,9 @@ def productos():
     productos = []
 
     try:
-        # Llama a la API para obtener todos los productos
-        response = api_client.get('productos/productos')
-        if isinstance(response, list):  # La API devuelve una lista directamente
-            productos = response
-        else:
-            error_message = "Error inesperado al obtener los productos."
+        # Obtén los productos desde Firestore
+        productos_data = db.collection('productos').stream()
+        productos = [{'id': doc.id, **doc.to_dict()} for doc in productos_data]  # Asegúrate de incluir 'id'
     except Exception as e:
         error_message = f"Error al obtener los productos: {e}"
         print(error_message)
@@ -427,97 +430,148 @@ def productos():
 def agregar_producto():
     error_message = None
     if request.method == 'POST':
-        titulo = request.form.get('titulo')
-        descripcion = request.form.get('descripcion')
-        precio = request.form.get('precio')
-        imagen = request.form.get('imagen')
-        tiny_descripcion = request.form.get('tinyDescripcion')
+        try:
+            titulo = request.form.get('titulo')
+            descripcion = request.form.get('descripcion')
+            precio = request.form.get('precio')
+            imagen = request.files.get('imagen')
+            tiny_descripcion = request.form.get('tinyDescripcion')
 
-        if not (titulo and descripcion and precio):
-            error_message = "Todos los campos obligatorios deben completarse."
-        else:
-            payload = {
+            if not (titulo and descripcion and precio and imagen):
+                error_message = "Todos los campos obligatorios deben completarse."
+                raise ValueError(error_message)
+
+            # Validar y convertir imagen
+            filename, ext = os.path.splitext(imagen.filename)
+            ext = ext.lower()
+            if ext not in ['.png', '.jpg', '.jpeg']:
+                ext = '.png'  # Por defecto PNG si el formato no es compatible
+            converted_filename = f"{filename}{ext}"
+
+            image = Image.open(imagen)
+            image_io = io.BytesIO()
+            image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
+            image_io.seek(0)
+
+            # Subir imagen al bucket
+            blob = bucket.blob(f"productos/{converted_filename}")
+            blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
+            blob.make_public()  # Hacer la URL pública
+            imagen_url = blob.public_url
+
+            # Guardar datos del producto en Firestore
+            producto_data = {
                 'titulo': titulo,
                 'descripcion': descripcion,
                 'precio': float(precio),
-                'imagen': imagen,
+                'imagen': imagen_url,
                 'tiny_descripcion': tiny_descripcion,
+                'fecha_creacion': datetime.utcnow()
             }
+            db.collection('productos').add(producto_data)
 
-            try:
-                response = api_client.post('productos', json=payload)
-                if response and response.get('message') == 'Producto agregado con éxito':
-                    return redirect(url_for('productos'))
-                else:
-                    error_message = response.get('message', 'Error al agregar el producto.')
-            except Exception as e:
-                error_message = f"Error al agregar el producto: {e}"
-                print(error_message)
+            return redirect(url_for('productos'))
+        except Exception as e:
+            error_message = f"Error al procesar el formulario: {e}"
+            print(error_message)
 
     return render_template('agregar-producto.html', error_message=error_message)
+
+
+
+
 
 @app.route('/modificar_producto/<string:id_producto>', methods=['GET', 'POST'])
 @login_required
 def modificar_producto(id_producto):
     error_message = None
-    producto = {}
+    producto_ref = db.collection('productos').document(id_producto)
 
     if request.method == 'POST':
-        # Capturar los datos enviados desde el formulario
         titulo = request.form.get('titulo')
         descripcion = request.form.get('descripcion')
         precio = request.form.get('precio')
-        imagen = request.form.get('imagen')
+        imagen = request.files.get('imagen')  # Archivo subido
         tiny_descripcion = request.form.get('tinyDescripcion')
 
-        # Crear el diccionario con los campos a actualizar
-        updates = {
-            'titulo': titulo,
-            'descripcion': descripcion,
-            'precio': float(precio) if precio else None,
-            'imagen': imagen,
-            'tiny_descripcion': tiny_descripcion,
-        }
-
-        # Enviar la solicitud PATCH a la API
         try:
-            response = api_client.patch(f'productos/productos/{id_producto}', json=updates)
-            if response and response.get('message') == 'Producto actualizado con éxito':
-                return redirect(url_for('productos'))
-            else:
-                error_message = response.get('message', 'Error al actualizar el producto.')
+            updates = {
+                'titulo': titulo,
+                'descripcion': descripcion,
+                'precio': float(precio) if precio else None,
+                'tiny_descripcion': tiny_descripcion,
+                'ult_actualizacion': datetime.utcnow()
+            }
+
+            # Procesar imagen si se sube una nueva
+            if imagen:
+                filename, ext = os.path.splitext(imagen.filename)
+                ext = ext.lower()
+                if ext not in ['.png', '.jpg', '.jpeg']:
+                    ext = '.png'  # Por defecto PNG
+                converted_filename = f"{filename}{ext}"
+
+                # Leer y convertir la imagen
+                image = Image.open(imagen)
+                image_io = io.BytesIO()
+                image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
+                image_io.seek(0)
+
+                # Subir la imagen al bucket de Firebase Storage
+                blob = bucket.blob(f"productos/{converted_filename}")
+                blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
+                blob.make_public()  # Hacer la URL pública
+                updates['imagen'] = blob.public_url
+
+            # Actualizar datos en Firestore
+            producto_ref.update(updates)
+            return redirect(url_for('productos'))
         except Exception as e:
-            error_message = f"Error al actualizar el producto: {e}"
+            error_message = f"Error al actualizar el producto: {str(e)}"
             print(error_message)
 
-    # Obtener los datos del producto desde la API
-    try:
-        response = api_client.get(f'productos/productos/{id_producto}')
-        if response:
-            producto = response
-        else:
-            error_message = "Error al cargar los datos del producto."
-    except Exception as e:
-        error_message = f"Error al cargar los datos del producto: {e}"
-        print(error_message)
+    # Obtener datos actuales del producto
+    producto = producto_ref.get()
+    if producto.exists:
+        producto_data = {'id': producto_ref.id, **producto.to_dict()}
+    else:
+        return "Producto no encontrado", 404
 
-    return render_template('editar-producto.html', producto=producto, error_message=error_message)
+    return render_template('editar-producto.html', producto=producto_data, error_message=error_message)
 
+
+
+
+@app.route('/upload_image', methods=['POST'])
+def upload_image():
+    if 'imagen' not in request.files:
+        return "No se subió ningún archivo", 400
+
+    file = request.files['imagen']
+    if file.filename == '':
+        return "Nombre del archivo vacío", 400
+
+    bucket = storage.bucket()
+    blob = bucket.blob(f"imagenes/{file.filename}")
+    blob.upload_from_file(file)
+
+    return blob.public_url
 
 @app.route('/eliminar_producto/<string:id_producto>', methods=['POST'])
 @login_required
 def eliminar_producto(id_producto):
     try:
-        response = api_client.delete(f'productos/{id_producto}')
-        if response and response.get('message') == 'Producto eliminado con éxito':
-            return redirect(url_for('productos'))
-        else:
-            error_message = response.get('message', 'Error al eliminar el producto.')
-            print(error_message)
-            return redirect(url_for('productos', mensaje=error_message))
+        # Referencia al documento del producto en Firestore
+        producto_ref = db.collection('productos').document(id_producto)
+
+        # Eliminar el producto
+        producto_ref.delete()
+        print(f"Producto {id_producto} eliminado de Firestore.")
+        return redirect(url_for('productos'))
     except Exception as e:
-        print(f"Error al eliminar el producto: {e}")
-        return redirect(url_for('productos', mensaje="Error al procesar la solicitud"))
+        print(f"Error al eliminar el producto {id_producto}: {e}")
+        return redirect(url_for('productos', mensaje="Error al eliminar el producto"))
+
 
 # DISPOSITIVOS
 @app.route('/dispositivos', methods=['GET'])

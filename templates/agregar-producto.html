@@ -3,29 +3,33 @@
 {% block content %}
 <h2>Agregar Producto</h2>
 <div class="container mt-2 card p-3">
-    <form action="{{ url_for('agregar_producto') }}" method="post">
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+    <form action="{{ url_for('agregar_producto') }}" method="post" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="titulo" class="form-label">Título:</label>
-            <input type="text" class="form-control" id="titulo" name="titulo" required>
+            <input type="text" class="form-control" id="titulo" name="titulo" placeholder="Ingrese el título del producto" required>
         </div>
         <div class="mb-3">
             <label for="descripcion" class="form-label">Descripción:</label>
-            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+            <textarea class="form-control" id="descripcion" name="descripcion" placeholder="Ingrese una descripción del producto" rows="3" required></textarea>
         </div>
         <div class="mb-3">
             <label for="precio" class="form-label">Precio:</label>
-            <input type="number" class="form-control" id="precio" name="precio" required>
+            <input type="number" class="form-control" id="precio" name="precio" placeholder="Ingrese el precio del producto" step="0.01" required>
         </div>
         <div class="mb-3">
-            <label for="imagen" class="form-label">URL de la Imagen:</label>
-            <input type="text" class="form-control" id="imagen" name="imagen">
+            <label for="imagen" class="form-label">Cargar Imagen:</label>
+            <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" required>
         </div>
         <div class="mb-3">
-            <label for="tinyDescripcion" class="form-label">Descripción Breve:</label>
-            <textarea class="form-control" id="tinyDescripcion" name="tinyDescripcion" rows="2"></textarea>
+            <label for="tiny_descripcion" class="form-label">Descripción Breve:</label>
+            <textarea class="form-control" id="tiny_descripcion" name="tiny_descripcion" placeholder="Ingrese una breve descripción del producto" rows="2"></textarea>
         </div>
         <button type="submit" class="btn btn-success">Agregar Producto</button>
     </form>
 </div>
-
 {% endblock %}

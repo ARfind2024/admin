@@ -1,9 +1,14 @@
 {% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
-{% block content %}
 
-<h2>Modificar Producto</h2>
+{% block content %}
+<h2>Editar Producto</h2>
 <div class="container mt-2 card p-3">
-    <form action="{{ url_for('modificar_producto', id_producto=producto['id']) }}" method="post">
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+    <form action="{{ url_for('modificar_producto', id_producto=producto['id']) }}" method="post" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="titulo" class="form-label">Título:</label>
             <input type="text" class="form-control" id="titulo" name="titulo" value="{{ producto['titulo'] }}" required>
@@ -14,20 +19,17 @@
         </div>
         <div class="mb-3">
             <label for="precio" class="form-label">Precio:</label>
-            <input type="number" class="form-control" id="precio" name="precio" value="{{ producto['precio'] }}" required>
+            <input type="number" class="form-control" id="precio" name="precio" value="{{ producto['precio'] }}" step="0.01" required>
         </div>
         <div class="mb-3">
-            <label for="imagen" class="form-label">URL de la Imagen:</label>
-            <input type="text" class="form-control" id="imagen" name="imagen" value="{{ producto['imagen'] }}">
+            <label for="imagen" class="form-label">Cargar Nueva Imagen (opcional):</label>
+            <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
         </div>
         <div class="mb-3">
-            <label for="tinyDescripcion" class="form-label">Descripción Breve:</label>
-            <textarea class="form-control" id="tinyDescripcion" name="tinyDescripcion" rows="2">{{ producto['tinydescripcion'] }}</textarea>
+            <label for="tiny_descripcion" class="form-label">Descripción Breve:</label>
+            <textarea class="form-control" id="tiny_descripcion" name="tiny_descripcion" rows="2">{{ producto['tiny_descripcion'] }}</textarea>
         </div>
         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
     </form>
-
-
 </div>
-
 {% endblock %}

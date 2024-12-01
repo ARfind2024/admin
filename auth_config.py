@@ -10,7 +10,7 @@ config = {
     "apiKey": os.getenv("FIREBASE_API_KEY"),
     "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
     "databaseURL": os.getenv("FIREBASE_DATABASE_URL"),
-    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+    "storageBucket": "arfind.appspot.com",  # Aquí se asegura el bucket explícitamente
     "serviceAccount": {
         "type": "service_account",
         "project_id": os.getenv("FIREBASE_PROJECT_ID"),
