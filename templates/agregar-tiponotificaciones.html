@@ -1,0 +1,17 @@
+{% extends 'baseAdmin.html' %}
+{% block content %}
+<h2>Agregar Tipo Notificación</h2>
+<div class="container mt-2 card p-3">
+    <form action="{{ url_for('agregar_tiponotificacion') }}" method="post">
+        <div class="mb-3">
+            <label for="tipo" class="form-label">Nombre:</label>
+            <input type="text" class="form-control" id="tipo" name="tipo" placeholder="Ingrese el nombre del tipo de notificación" required>
+        </div>
+        <div class="mb-3">
+            <label for="mensaje_plantilla" class="form-label">Mensaje Plantilla:</label>
+            <textarea class="form-control" id="mensaje_plantilla" name="mensaje_plantilla" rows="3" placeholder="Ingrese un mensaje plantilla" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Agregar Tipo</button>
+    </form>
+</div>
+{% endblock %}

@@ -656,6 +656,7 @@ def modificar_dispositivo(id_dispositivo):
             }
 
             try:
+                # Usar el endpoint de la API para actualizar el dispositivo
                 response = api_client.put('dispositivos/updateDispositivo', json=payload)
                 if response and response.get('message') == 'Dispositivo actualizado exitosamente':
                     # Redirigir a la lista de dispositivos
@@ -672,16 +673,26 @@ def modificar_dispositivo(id_dispositivo):
             dispositivos = response
             dispositivo = next((d for d in dispositivos if d['id'] == id_dispositivo), None)
 
-            # Manejar timestamps
             if dispositivo:
-                if '_seconds' in dispositivo.get('fecha_creacion', {}):
-                    dispositivo['fecha_creacion'] = datetime.fromtimestamp(
-                        dispositivo['fecha_creacion']['_seconds']
-                    ).strftime('%Y-%m-%d %H:%M:%S')
-                if '_seconds' in dispositivo.get('ult_actualizacion', {}):
-                    dispositivo['ult_actualizacion'] = datetime.fromtimestamp(
-                        dispositivo['ult_actualizacion']['_seconds']
-                    ).strftime('%Y-%m-%d %H:%M:%S')
+                # Obtener información de los usuarios invitados y el usuario principal
+                usuarios_invitados = dispositivo.get('usuarios_invitados', [])
+                usuario_id = dispositivo.get('usuario_id')
+
+                # Consultar información de los usuarios invitados
+                emails_invitados = []
+                for user_id in usuarios_invitados:
+                    user_response = api_client.get(f'usuarios/{user_id}')
+                    if user_response and user_response.get('correo'):
+                        emails_invitados.append(user_response['correo'])
+                    else:
+                        emails_invitados.append(f"Usuario ID {user_id} no disponible")
+
+                dispositivo['usuarios_invitados'] = emails_invitados
+
+                # Consultar información del usuario principal
+                if usuario_id:
+                    user_response = api_client.get(f'usuarios/{usuario_id}')
+                    dispositivo['usuario_id'] = user_response.get('correo', 'Correo no disponible')
             else:
                 error_message = "Dispositivo no encontrado."
         else:
@@ -690,11 +701,6 @@ def modificar_dispositivo(id_dispositivo):
         error_message = f"Error al cargar los datos del dispositivo: {str(e)}"
 
     return render_template('editar-dispositivo.html', dispositivo=dispositivo, error_message=error_message)
-
-
-
-
-
 
 
 @app.route('/eliminar_dispositivo/<string:id_dispositivo>', methods=['POST'])
@@ -721,144 +727,240 @@ def eliminar_dispositivo(id_dispositivo):
         return redirect(url_for('dispositivos', mensaje="Error al procesar la solicitud"))
 
 
-
-
 @app.route('/planes', methods=['GET'])
 @login_required
 def planes():
     mensaje = request.args.get('mensaje', None)
     try:
-        response = api_client.get('planes/getPlanes')
-        planes = response.get('data', []) if response else []
+        planes_query = db.collection('planes').stream()
+        planes = [{'id': doc.id, **doc.to_dict()} for doc in planes_query]
         return render_template('tb-planes.html', planes=planes, mensaje=mensaje)
     except Exception as e:
         print(f"Error al obtener planes: {e}")
         return render_template('tb-planes.html', planes=[], mensaje="Error al obtener los planes.")
+
 
 @app.route('/planes/agregar', methods=['GET', 'POST'])
 @login_required
 def agregar_plan():
     error_message = None
     if request.method == 'POST':
-        # Obtener los datos del formulario
-        nombre = request.form.get('nombre')
-        precio = request.form.get('precio')
-        descripcion = request.form.get('descripcion')
-        refresco = request.form.get('refresco')
-        cantidad_compartidos = request.form.get('cantidad_compartidos')
-        imagen = request.form.get('imagen')
-
-        # Validar que todos los campos sean obligatorios
-        if not (nombre and precio and descripcion and refresco and cantidad_compartidos and imagen):
-            error_message = "Todos los campos son obligatorios."
-            return render_template('agregar-planes.html', error_message=error_message)
-
         try:
-            # Convertir los datos a los tipos necesarios
-            precio = float(precio)
-            refresco = int(refresco)
-            cantidad_compartidos = int(cantidad_compartidos)
+            nombre = request.form.get('nombre')
+            precio = float(request.form.get('precio'))
+            descripcion = request.form.get('descripcion')
+            refresco = int(request.form.get('refresco'))
+            cantidad_compartidos = int(request.form.get('cantidad_compartidos'))
+            imagen = request.files.get('imagen')
 
-            # Crear el payload para la API
-            payload = {
+            if not all([nombre, precio, descripcion, refresco, cantidad_compartidos, imagen]):
+                raise ValueError("Todos los campos son obligatorios.")
+
+            # Validar y convertir imagen
+            filename, ext = os.path.splitext(imagen.filename)
+            ext = ext.lower()
+            if ext not in ['.png', '.jpg', '.jpeg']:
+                ext = '.png'  # Por defecto PNG si el formato no es compatible
+            converted_filename = f"planes/{filename}{ext}"
+
+            image = Image.open(imagen)
+            image_io = io.BytesIO()
+            image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
+            image_io.seek(0)
+
+            # Subir imagen al bucket
+            blob = bucket.blob(converted_filename)
+            blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
+            blob.make_public()  # Hacer la URL pública
+            imagen_url = blob.public_url
+
+            # Guardar datos del plan en Firestore
+            plan_data = {
                 'nombre': nombre,
                 'precio': precio,
                 'descripcion': descripcion,
                 'refresco': refresco,
                 'cantidad_compartidos': cantidad_compartidos,
-                'imagen': imagen
+                'imagen': imagen_url,
+                'fecha_creacion': datetime.utcnow()
             }
+            db.collection('planes').add(plan_data)
 
-            # Llamar a la API para crear el plan
-            response = api_client.post('planes/createPlan', json=payload)
-
-            if response and response.get('message') == 'Plan creado con éxito':
-                return redirect(url_for('planes', mensaje="Plan agregado con éxito"))
-            else:
-                error_message = response.get('message', 'Error desconocido al agregar plan.')
+            return redirect(url_for('planes', mensaje="Plan agregado con éxito"))
         except Exception as e:
-            print(f"Error al agregar plan: {e}")
-            error_message = "Error al procesar la solicitud."
+            error_message = f"Error al agregar el plan: {e}"
+            print(error_message)
 
     return render_template('agregar-planes.html', error_message=error_message)
 
 
-
-@app.route('/planes/editar/<id_plan>', methods=['GET', 'POST'])
+@app.route('/planes/editar/<string:id_plan>', methods=['GET', 'POST'])
 @login_required
 def modificar_plan(id_plan):
     error_message = None
-    plan = {}
-
-    try:
-        # Llama al endpoint que obtiene todos los planes
-        response = api_client.get('planes/getPlanes')
-        if response and 'data' in response:
-            # Filtra el plan por ID
-            planes = response['data']
-            plan = next((p for p in planes if p['id'] == id_plan), None)
-            if not plan:
-                error_message = "El plan no existe o no se pudo cargar."
-        else:
-            error_message = response.get('message', 'Error al obtener los planes.')
-    except Exception as e:
-        print(f"Error al cargar datos del plan: {e}")
-        error_message = "Error al cargar datos del plan."
+    plan_ref = db.collection('planes').document(id_plan)
 
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        precio = float(request.form.get('precio', 0))
-        descripcion = request.form.get('descripcion')
-        refresco = int(request.form.get('refresco', 0))
-        cantidad_compartidos = int(request.form.get('cantidad_compartidos', 0))
-        imagen = request.form.get('imagen')
+        try:
+            nombre = request.form.get('nombre')
+            precio = float(request.form.get('precio'))
+            descripcion = request.form.get('descripcion')
+            refresco = int(request.form.get('refresco'))
+            cantidad_compartidos = int(request.form.get('cantidad_compartidos'))
+            imagen = request.files.get('imagen')
 
-        if not all([nombre, precio, descripcion, refresco, cantidad_compartidos, imagen]):
-            error_message = "Todos los campos son obligatorios."
-        else:
-            try:
-                payload = {
-                    "id": id_plan,
-                    "nombre": nombre,
-                    "precio": precio,
-                    "descripcion": descripcion,
-                    "refresco": refresco,
-                    "cantidad_compartidos": cantidad_compartidos,
-                    "imagen": imagen,
-                }
-                update_response = api_client.put('planes/updatePlan', json=payload)
-                if update_response.get('message') == 'Plan actualizado con éxito':
-                    return redirect(url_for('planes'))
-                else:
-                    error_message = update_response.get('message', 'Error al actualizar el plan.')
-            except Exception as e:
-                print(f"Error al actualizar el plan: {e}")
-                error_message = "Error al actualizar el plan."
+            updates = {
+                'nombre': nombre,
+                'precio': precio,
+                'descripcion': descripcion,
+                'refresco': refresco,
+                'cantidad_compartidos': cantidad_compartidos,
+                'ult_actualizacion': datetime.utcnow()
+            }
 
-    return render_template('editar-planes.html', plan=plan, error_message=error_message)
+            # Procesar nueva imagen si se sube
+            if imagen:
+                filename, ext = os.path.splitext(imagen.filename)
+                ext = ext.lower()
+                if ext not in ['.png', '.jpg', '.jpeg']:
+                    ext = '.png'  # Por defecto PNG
+                converted_filename = f"planes/{filename}{ext}"
 
+                image = Image.open(imagen)
+                image_io = io.BytesIO()
+                image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
+                image_io.seek(0)
 
+                # Subir imagen al bucket
+                blob = bucket.blob(converted_filename)
+                blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
+                blob.make_public()  # Hacer la URL pública
+                updates['imagen'] = blob.public_url
 
+            # Actualizar datos en Firestore
+            plan_ref.update(updates)
+            return redirect(url_for('planes', mensaje="Plan actualizado con éxito"))
+        except Exception as e:
+            error_message = f"Error al actualizar el plan: {e}"
+            print(error_message)
+
+    # Obtener datos del plan para editar
+    plan = plan_ref.get()
+    if plan.exists:
+        plan_data = {'id': plan_ref.id, **plan.to_dict()}
+    else:
+        return "Plan no encontrado", 404
+
+    return render_template('editar-planes.html', plan=plan_data, error_message=error_message)
 
 @app.route('/planes/eliminar/<string:id_plan>', methods=['POST'])
 @login_required
 def eliminar_plan(id_plan):
     try:
-        # Crear el payload para eliminar el plan
-        payload = {'id': id_plan}
-
-        # Llamar a la API para eliminar el plan
-        response = api_client.delete('planes/deletePlan', json=payload)
-
-        if response and response.get('message') == 'Plan eliminado con éxito':
-            return redirect(url_for('planes', mensaje="Plan eliminado con éxito"))
-        else:
-            error_message = response.get('message', 'Error desconocido al eliminar el plan.')
-            print(f"Error al eliminar plan: {error_message}")
-            return redirect(url_for('planes', mensaje=error_message))
+        plan_ref = db.collection('planes').document(id_plan)
+        plan_ref.delete()
+        print(f"Plan {id_plan} eliminado de Firestore.")
+        return redirect(url_for('planes', mensaje="Plan eliminado con éxito"))
     except Exception as e:
-        print(f"Error al eliminar plan: {e}")
-        return redirect(url_for('planes', mensaje="Error al procesar la solicitud"))
+        print(f"Error al eliminar el plan {id_plan}: {e}")
+        return redirect(url_for('planes', mensaje="Error al eliminar el plan"))
+
+@app.route('/tiponotificaciones', methods=['GET'])
+@login_required
+def tiponotificaciones():
+    try:
+        response = api_client.get('notificaciones/getTiposNotificaciones')
+        if response:
+            tipos_notificaciones = response
+            return render_template('tb-tipo_notificaciones.html', tipos_notificaciones=tipos_notificaciones)
+        else:
+            return render_template('tb-tipo_notificaciones.html', tipos_notificaciones=[], mensaje="Error al obtener los datos.")
+    except Exception as e:
+        print(f"Error al obtener tipos de notificación: {e}")
+        return render_template('tb-tipo_notificaciones.html', tipos_notificaciones=[], mensaje="Error interno del servidor.")
+
+
+
+
+@app.route('/tiponotificaciones/agregar', methods=['GET', 'POST'])
+@login_required
+def agregar_tiponotificacion():
+    if request.method == 'POST':
+        try:
+            tipo = request.form.get('tipo')
+            mensaje_plantilla = request.form.get('mensaje_plantilla')
+
+            if not (tipo and mensaje_plantilla):
+                raise ValueError("Todos los campos son obligatorios.")
+
+            payload = {
+                'id_tipo_notificacion': str(datetime.utcnow().timestamp()),  # Generar un ID único
+                'tipo': tipo,
+                'mensaje_plantilla': mensaje_plantilla,
+            }
+            response = api_client.post('notificaciones/createTipoNotificacion', json=payload)
+
+            if response:
+                return redirect(url_for('tiponotificaciones'))
+            else:
+                raise ValueError("Error al agregar el tipo de notificación.")
+        except Exception as e:
+            print(f"Error al agregar tipo de notificación: {e}")
+    return render_template('agregar-tiponotificaciones.html')
+
+
+
+
+@app.route('/tiponotificaciones/editar/<string:id_tipo>', methods=['GET', 'POST'])
+@login_required
+def editar_tiponotificacion(id_tipo):
+    if request.method == 'POST':
+        try:
+            tipo = request.form.get('tipo')
+            mensaje_plantilla = request.form.get('mensaje_plantilla')
+
+            if not (tipo or mensaje_plantilla):
+                raise ValueError("Debe proporcionar al menos un campo para actualizar.")
+
+            payload = {
+                'id': id_tipo,
+                'tipo': tipo,
+                'mensaje_plantilla': mensaje_plantilla,
+            }
+            response = api_client.put('notificaciones/updateTipoNotificacion', json=payload)
+
+            if response:
+                return redirect(url_for('tiponotificaciones'))
+            else:
+                raise ValueError("Error al editar el tipo de notificación.")
+        except Exception as e:
+            print(f"Error al editar tipo de notificación: {e}")
+
+    # Obtener datos del tipo de notificación para prellenar el formulario
+    response = api_client.get('notificaciones/getTiposNotificaciones')
+    tipo = next((t for t in response if t['id'] == id_tipo), None) if response else None
+    return render_template('editar-tiponotificaciones.html', tipo=tipo)
+
+
+@app.route('/tiponotificaciones/eliminar/<string:id_tipo>', methods=['POST'])
+@login_required
+def eliminar_tiponotificacion(id_tipo):
+    try:
+        payload = {'id': id_tipo}
+        response = api_client.delete('notificaciones/deleteTipoNotificacion', json=payload)
+
+        if response:
+            return redirect(url_for('tiponotificaciones'))
+        else:
+            raise ValueError("Error al eliminar el tipo de notificación.")
+    except Exception as e:
+        print(f"Error al eliminar tipo de notificación: {e}")
+        return redirect(url_for('tiponotificaciones', mensaje="Error interno del servidor."))
+
+
+
+
+
 @app.template_filter('timestamp_to_datetime')
 def timestamp_to_datetime(value):
     try:

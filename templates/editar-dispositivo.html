@@ -33,8 +33,10 @@
             <input type="text" class="form-control" id="ubicacion" name="ubicacion" value="{{ dispositivo.get('ubicacion', 'N/A') }}" disabled>
         </div>
         <div class="mb-3">
-            <label for="usuarios_invitados" class="form-label">Usuarios Invitados:</label>
-            <textarea class="form-control" id="usuarios_invitados" name="usuarios_invitados" rows="3" disabled>{{ dispositivo.get('usuarios_invitados', []) | join(', ') }}</textarea>
+            <label for="emails_invitados" class="form-label">Correos de Usuarios Invitados:</label>
+            <textarea class="form-control" id="emails_invitados" name="emails_invitados" rows="3" disabled>
+                {{ dispositivo.get('emails_invitados', 'No hay invitados') | replace(" ", "") }}
+            </textarea>
         </div>
         <div class="mb-3">
             <label for="ult_actualizacion" class="form-label">Última Actualización:</label>
@@ -47,7 +49,7 @@
         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
     </form>
 </div>
-    <script>
+<script>
     document.querySelector('form').addEventListener('submit', function(event) {
         event.preventDefault();
         const form = event.target;

@@ -2,7 +2,7 @@
 {% block content %}
 <h2>Agregar Plan</h2>
 <div class="container mt-2 card p-3">
-    <form action="{{ url_for('agregar_plan') }}" method="post">
+    <form action="{{ url_for('agregar_plan') }}" method="post" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="nombre" class="form-label">Nombre del Plan:</label>
             <input type="text" class="form-control" id="nombre" name="nombre" required>
@@ -24,8 +24,8 @@
             <input type="number" class="form-control" id="cantidad_compartidos" name="cantidad_compartidos" required>
         </div>
         <div class="mb-3">
-            <label for="imagen" class="form-label">URL de la Imagen:</label>
-            <input type="text" class="form-control" id="imagen" name="imagen" required>
+            <label for="imagen" class="form-label">Imagen del Plan:</label>
+            <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" required>
         </div>
         <button type="submit" class="btn btn-success">Agregar Plan</button>
     </form>

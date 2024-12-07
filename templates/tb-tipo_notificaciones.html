@@ -1,0 +1,39 @@
+{% extends 'baseAdmin.html' %}
+{% block content %}
+<div class="row mb-2">
+    <h1 class="h3 col-10">Tipo Notificaciones</h1>
+    <a href="{{ url_for('agregar_tiponotificacion') }}" class="btn btn-success col-2">Agregar Tipo Notificación</a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Mensaje Plantilla</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tipo in tipos_notificaciones %}
+                        <tr>
+                            <td>{{ tipo.tipo }}</td>
+                            <td>{{ tipo.mensaje_plantilla }}</td>
+                            <td>
+                                <div class="d-flex justify-content-around">
+                                    <a href="{{ url_for('editar_tiponotificacion', id_tipo=tipo.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                    <form action="{{ url_for('eliminar_tiponotificacion', id_tipo=tipo.id) }}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este tipo de notificación?')">Borrar</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
