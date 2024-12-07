@@ -2,42 +2,47 @@
 {% block content %}
 
     <h2>Modificar Pedido</h2>
-    <div class="container mt-2 card p-3">
+<form method="POST">
+    <div class="form-group">
+        <label for="fecha_entrega">Fecha de Entrega:</label>
+        <input type="text" id="fecha_entrega" name="fecha_entrega" class="form-control"
+               value="{{ pedido.get('fecha_entrega', 'No disponible') }}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="fecha_solicitud">Fecha de Solicitud:</label>
+        <input type="text" id="fecha_solicitud" name="fecha_solicitud" class="form-control"
+               value="{{ pedido.get('fecha_solicitud', 'No disponible') }}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="id_dispositivo">ID del Dispositivo:</label>
+        <input type="text" id="id_dispositivo" name="id_dispositivo" class="form-control"
+               value="{{ pedido.get('id_dispositivo', 'No disponible') }}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="plan_id">Plan ID:</label>
+        <input type="text" id="plan_id" name="plan_id" class="form-control"
+               value="{{ pedido.get('plan_id', 'No disponible') }}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="producto_id">Producto ID:</label>
+        <input type="text" id="producto_id" name="producto_id" class="form-control"
+               value="{{ pedido.get('producto_id', 'No disponible') }}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="usuario_id">Usuario ID:</label>
+        <input type="text" id="usuario_id" name="usuario_id" class="form-control"
+               value="{{ pedido.get('usuario_id', 'No disponible') }}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="status">Estado:</label>
+        <select id="status" name="status" class="form-control">
+            <option value="No Entregado" {% if pedido.get('is_entregado') == False %}selected{% endif %}>No Entregado</option>
+            <option value="Entregado" {% if pedido.get('is_entregado') == True %}selected{% endif %}>Entregado</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+</form>
 
-        <form action="{{ url_for('modificar_pedido', id_pedido=id_pedido) }}" method="post">
-            <div class="mb-3">
-                <label for="titulo" class="form-label">Título del Pedido:</label>
-                <input type="text" class="form-control" id="titulo" name="titulo" value="{{ pedido.titulo }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="descripcion" class="form-label">Descripción:</label>
-                <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required>{{ pedido.descripcion }}</textarea>
-            </div>
-            <div class="mb-3">
-                <label for="items" class="form-label">Items:</label>
-                <input type="text" class="form-control" id="items" name="items" value="{{ pedido.prod }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="status" class="form-label">Estado:</label>
-                <select class="form-control" id="status" name="status">
-                    <option value="No Entregado" {% if pedido.status == 'No Entregado' %}selected{% endif %}>No Entregado</option>
-                    <option value="Entregado" {% if pedido.status == 'Entregado' %}selected{% endif %}>Entregado</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="userId" class="form-label">ID del Usuario:</label>
-                <input type="text" class="form-control" id="userId" name="userId" value="{{ pedido.userId }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="createdAt" class="form-label">Fecha de Creación:</label>
-                <input type="text" class="form-control" id="createdAt" name="createdAt" value="{{ pedido.createdAt }}" disabled>
-            </div>
-            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-        </form>
-
-        <form action="{{ url_for('eliminar_pedido', id_pedido=id_pedido) }}" method="post" class="mt-3">
-            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que deseas eliminar este pedido?')">Eliminar Pedido</button>
-        </form>
     </div>
 
 {% endblock %}

@@ -11,7 +11,7 @@ import io
 
 
 # Importar configuraciones
-from auth_config import pyrebase_auth, config  # Usamos el config ajustado en auth_config.py
+from auth_config import pyrebase_auth, config
 from api_client import APIClient
 
 # Cargar variables de entorno
@@ -44,7 +44,7 @@ def get_authorization_headers():
     id_token = session.get("idToken")
     return {"Authorization": f"Bearer {id_token}"} if id_token else {}
 
-api_client = APIClient(base_url="https://arfindfranco-t22ijacwda-uc.a.run.app")
+api_client = APIClient(base_url="https://arfindtiago-t22ijacwda-uc.a.run.app")
 
 # Configurar Flask
 app = Flask(__name__)
@@ -347,54 +347,92 @@ def pedidos():
     error_message = None
 
     try:
-        # Solicitar datos desde la API
-        response = api_client.get('pedidos')
+        # Usa el nuevo endpoint para obtener todos los pedidos
+        response = api_client.get('pedidos/getAllPedidos')
         if isinstance(response, list):
-            pedidos_list = response
+            for pedido in response:
+
+                fecha_solicitud = pedido.get('fecha_solicitud')
+                if fecha_solicitud and '_seconds' in fecha_solicitud:
+                    from datetime import datetime
+                    timestamp = datetime.fromtimestamp(fecha_solicitud['_seconds'])
+                    pedido['createdAt'] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    pedido['createdAt'] = 'No disponible'
+
+                pedido['status'] = 'Entregado' if pedido.get('is_entregado', False) else 'No Entregado'
+
+                # Formatear los items (producto_id)
+                pedido['prod'] = pedido.get('producto_id', 'No especificado')
+
+                pedido['userId'] = pedido.get('usuario_id', 'No especificado')
+
+                pedidos_list.append(pedido)
         else:
             error_message = "Error inesperado al obtener los pedidos."
     except Exception as e:
         error_message = f"Error al obtener los pedidos: {e}"
         print(error_message)
 
+
     return render_template('tb-pedido.html', pedidos=pedidos_list, error_message=error_message)
 
-@app.route('/modificar_pedido/<string:id_pedido>', methods=['GET', 'POST'])
-def modificar_pedido(id_pedido):
-    pedido_ref = db.collection('pedidos').document(id_pedido)
 
+import locale
+from datetime import datetime
+
+@app.route('/modificar_pedido/<string:id_pedido>', methods=['GET', 'POST'])
+@login_required
+def modificar_pedido(id_pedido):
     if request.method == 'POST':
         # Capturar datos del formulario
-        titulo = request.form.get('titulo')
-        descripcion = request.form.get('descripcion')
-        items = request.form.get('items')
         status = request.form.get('status')
-        userId = request.form.get('userId')
+        is_entregado = status == 'Entregado'
+        print(f"Datos enviados desde el formulario: is_entregado={is_entregado}")
 
-        # Imprimir los datos capturados
-        print("Datos capturados del formulario:")
-        print(f"Titulo: {titulo}, Descripción: {descripcion}, Items: {items}, Status: {status}, UserId: {userId}")
+        try:
 
-        # Actualizar los datos en Firestore
-        pedido_ref.update({
-            'titulo': titulo,
-            'descripcion': descripcion,
-            'items': items,
-            'status': status,
-            'userId': userId,
-        })
+            pedido_ref = db.collection('pedidos').document(id_pedido)
+            pedido_doc = pedido_ref.get()
 
-        # Redirigir al listado de pedidos
-        return redirect(url_for('pedidos'))
+            if not pedido_doc.exists:
+                print(f"Pedido con ID {id_pedido} no encontrado.")
+                return "Pedido no encontrado", 404
 
-    # Obtener el pedido para prellenar el formulario
-    pedido = pedido_ref.get()
-    if pedido.exists:
-        pedido_data = pedido.to_dict()
-        pedido_data['createdAt'] = pedido_data['createdAt'].strftime('%Y-%m-%d %H:%M:%S') if isinstance(pedido_data['createdAt'], datetime) else str(pedido_data['createdAt'])
+
+            update_data = {
+                'is_entregado': is_entregado,
+                'fecha_entrega': firestore.SERVER_TIMESTAMP if is_entregado else None
+            }
+            pedido_ref.update(update_data)
+            print(f"Pedido {id_pedido} actualizado con éxito en Firestore.")
+
+            return redirect(url_for('pedidos'))
+        except Exception as e:
+            print(f"Error al actualizar el pedido: {e}")
+            return "Error al actualizar el pedido", 500
+
+    try:
+        pedido_ref = db.collection('pedidos').document(id_pedido)
+        pedido_doc = pedido_ref.get()
+
+        if not pedido_doc.exists:
+            print(f"Pedido con ID {id_pedido} no encontrado.")
+            return "Pedido no encontrado", 404
+
+        pedido_data = pedido_doc.to_dict()
+        # Formatear fechas para mostrar en el template
+        if 'fecha_solicitud' in pedido_data and pedido_data['fecha_solicitud']:
+            pedido_data['fecha_solicitud'] = pedido_data['fecha_solicitud'].strftime('%Y-%m-%d %H:%M:%S')
+
+        if 'fecha_entrega' in pedido_data and pedido_data['fecha_entrega']:
+            pedido_data['fecha_entrega'] = pedido_data['fecha_entrega'].strftime('%Y-%m-%d %H:%M:%S')
+
         return render_template('editar-pedido.html', pedido=pedido_data, id_pedido=id_pedido)
-    else:
-        return "Pedido no encontrado", 404
+    except Exception as e:
+        print(f"Error al obtener el pedido: {e}")
+        return "Error interno al obtener el pedido", 500
+
 
 @app.route('/eliminar_pedido/<string:id_pedido>', methods=['POST'])
 def eliminar_pedido(id_pedido):
