@@ -1,8 +1,8 @@
 {% extends 'baseAdmin.html' if 'is_admin' in session and session['is_admin'] == 1 else 'base.html' %}
 {% block content %}
 
-    <h2>Modificar Pedido</h2>
-<form method="POST">
+<h2>Modificar Pedido</h2>
+<form method="POST" action="{{ url_for('modificar_pedido', id_pedido=id_pedido) }}">
     <div class="form-group">
         <label for="fecha_entrega">Fecha de Entrega:</label>
         <input type="text" id="fecha_entrega" name="fecha_entrega" class="form-control"
@@ -35,14 +35,13 @@
     </div>
     <div class="form-group">
         <label for="status">Estado:</label>
-        <select id="status" name="status" class="form-control">
-            <option value="No Entregado" {% if pedido.get('is_entregado') == False %}selected{% endif %}>No Entregado</option>
-            <option value="Entregado" {% if pedido.get('is_entregado') == True %}selected{% endif %}>Entregado</option>
+        <select id="status" name="is_entregado" class="form-control">
+            <option value="false" {% if not pedido.get('is_entregado', False) %}selected{% endif %}>No Entregado</option>
+            <option value="true" {% if pedido.get('is_entregado', False) %}selected{% endif %}>Entregado</option>
         </select>
     </div>
     <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    <a href="{{ url_for('pedidos') }}" class="btn btn-secondary">Cancelar</a>
 </form>
-
-    </div>
 
 {% endblock %}

@@ -9,15 +9,13 @@ from firebase_admin import storage
 from PIL import Image
 import io
 
-
-# Importar configuraciones
 from auth_config import pyrebase_auth, config
 from api_client import APIClient
 
-# Cargar variables de entorno
+
 load_dotenv()
 
-# Inicializar Firebase Admin SDK con variables de entorno
+
 if not firebase_admin._apps:
     cred = credentials.Certificate({
         "type": "service_account",
@@ -35,18 +33,17 @@ if not firebase_admin._apps:
         "storageBucket": "arfind.appspot.com"
     })
 
-# Inicializar cliente Firestore
 db = firestore.client()
 bucket = storage.bucket()
 
-# Configurar API Client
+
 def get_authorization_headers():
     id_token = session.get("idToken")
     return {"Authorization": f"Bearer {id_token}"} if id_token else {}
 
-api_client = APIClient(base_url="https://arfindtiago-t22ijacwda-uc.a.run.app")
+api_client = APIClient(base_url="https://arfindfranco-t22ijacwda-uc.a.run.app")
 
-# Configurar Flask
+
 app = Flask(__name__)
 app.secret_key = 'arfind'
 
@@ -60,12 +57,10 @@ def handle_login():
         password = request.form.get('password')
 
         try:
-            # Autenticación con Pyrebase
             user = pyrebase_auth.sign_in_with_email_and_password(username, password)
             id_token = user['idToken']
             print(f"ID Token generado: {id_token}")
 
-            # Consultar Firestore para obtener datos adicionales
             empleados_ref = db.collection('empleados')
             query = empleados_ref.where('email', '==', username).stream()
 
@@ -89,6 +84,8 @@ def handle_login():
 
     return render_template('login.html')
 
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -111,81 +108,70 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if 'nombreEmpleado' not in session:
-        return redirect(url_for('handle_login'))
-
-    if not session.get('is_admin'):
+    if not session.get('is_admin', 0):
         return redirect(url_for('dashboard2'))
 
-    # Consultar datos desde Firestore
-    pedidos_ref = db.collection('pedidos')
-    dispositivos_ref = db.collection('dispositivos')
-    planes_ref = db.collection('planes')
-    empleados_ref = db.collection('empleados')
-
     try:
-        # Datos específicos para administradores
-        total_dispositivos = len(list(dispositivos_ref.stream()))
-        total_planes = len(list(planes_ref.stream()))
-        total_empleados = len(list(empleados_ref.stream()))
-        total_admins = len(list(empleados_ref.where('is_admin', '==', True).stream()))
-        pedidos_entregados = len(list(pedidos_ref.where('status', '==', 'Entregado').stream()))
-        pedidos_no_entregados = len(list(pedidos_ref.where('status', '==', 'No Entregado').stream()))
+        dispositivos = db.collection('dispositivos').stream()
+        planes = db.collection('planes').stream()
+        empleados = db.collection('empleados').stream()
+        admins = db.collection('empleados').where('is_admin', '==', True).stream()
+        pedidos_entregados = db.collection('pedidos').where('is_entregado', '==', True).stream()
+        pedidos_no_entregados = db.collection('pedidos').where('is_entregado', '==', False).stream()
 
         return render_template(
             'index.html',
-            total_dispositivos=total_dispositivos,
-            total_planes=total_planes,
-            total_empleados=total_empleados,
-            total_admins=total_admins,
-            pedidos_entregados=pedidos_entregados,
-            pedidos_no_entregados=pedidos_no_entregados
+            total_dispositivos=len(list(dispositivos)),
+            total_planes=len(list(planes)),
+            total_empleados=len(list(empleados)),
+            total_admins=len(list(admins)),
+            pedidos_entregados=len(list(pedidos_entregados)),
+            pedidos_no_entregados=len(list(pedidos_no_entregados)),
+            is_admin=True
         )
     except Exception as e:
-        print(f"Error al consultar datos: {e}")
-        return "Error al cargar el dashboard", 500
+        print(f"Error cargando dashboard admin: {e}")
+        return "Error cargando dashboard admin", 500
 
 
 # DASHBOARD para No Administradores
 @app.route('/dashboard2')
+@login_required
 def dashboard2():
-    if 'nombreEmpleado' not in session:
-        return redirect(url_for('handle_login'))
-
-    if session.get('is_admin'):
-        return redirect(url_for('dashboard'))
-
-    # Consultar datos desde Firestore
-    pedidos_ref = db.collection('pedidos')
-
     try:
-        # Datos específicos para no administradores
-        total_pedidos = len(list(pedidos_ref.stream()))
-        pedidos_entregados = len(list(pedidos_ref.where('status', '==', 'Entregado').stream()))
-        pedidos_no_entregados = len(list(pedidos_ref.where('status', '==', 'No Entregado').stream()))
+        db = firestore.client()
+        pedidos_ref = db.collection('pedidos').stream()
+        pedidos = [pedido.to_dict() for pedido in pedidos_ref]
+
+        pedidos_totales = len(pedidos)
+        pedidos_entregados = len([p for p in pedidos if p.get('is_entregado')])
+        pedidos_no_entregados = len([p for p in pedidos if not p.get('is_entregado')])
 
         return render_template(
-            'base.html',
-            pedidos_totales=total_pedidos,
+            'index.html',
+            pedidos_totales=pedidos_totales,
             pedidos_entregados=pedidos_entregados,
-            pedidos_no_entregados=pedidos_no_entregados
+            pedidos_no_entregados=pedidos_no_entregados,
+            is_admin=False
         )
     except Exception as e:
-        print(f"Error al consultar datos: {e}")
-        return "Error al cargar el dashboard", 500
-
+        print(f"Error al cargar el Dashboard de empleados: {e}")
+        return render_template(
+            'index.html',
+            pedidos_totales=0,
+            pedidos_entregados=0,
+            pedidos_no_entregados=0,
+            is_admin=False
+        )
 
 # RUTA PARA MOSTRAR EMPLEADOS
 @app.route('/empleados', methods=['GET'])
 @login_required
 def empleados():
     try:
-        # Solicitar datos desde el endpoint de la API
         response = api_client.get("empleados/getEmpleados")
 
-        # Verificar si la respuesta es válida
         if response:
-            # Extraer la lista de empleados del campo `data`
             empleados = response.get("data", [])
             return render_template('tb-empleados.html', empleados=empleados)
         else:
@@ -200,16 +186,13 @@ def empleados():
 def agregar_empleado():
     error_message = None
     if request.method == 'POST':
-        # Captura los datos enviados desde el formulario
         nombre = request.form.get('nombre')
         email = request.form.get('correo')
         password = request.form.get('password')
-        is_admin = request.form.get('is_admin')  # 'true' o 'false' como string
+        is_admin = request.form.get('is_admin')
 
-        # Imprime los datos para depuración
         print(f"Datos recibidos: Nombre={nombre}, Email={email}, Password={password}, is_admin={is_admin}")
 
-        # Validar datos
         if not nombre or not email or not password or not is_admin:
             error_message = "Todos los campos son obligatorios."
             return render_template('agregar-empleado.html', error_message=error_message)
@@ -219,17 +202,14 @@ def agregar_empleado():
             return render_template('agregar-empleado.html', error_message=error_message)
 
         try:
-            # Convertir is_admin a booleano
             is_admin = is_admin.lower() == 'true'
-
-            # Llamar a la API para crear el empleado
             payload = {
                 'nombre': nombre,
                 'email': email,
                 'password': password,
                 'is_admin': is_admin
             }
-            print(f"Payload enviado a la API: {payload}")  # Depuración
+            print(f"Payload enviado a la API: {payload}")
 
             response = api_client.post('empleados/createEmpleado', json=payload)
             if response:
@@ -252,32 +232,24 @@ def modificar_empleado(id_empleado):
     if request.method == 'POST':
         nombre = request.form.get('nombre')
         email = request.form.get('correo')
-        is_admin = request.form.get('is_admin')  # 'true' o 'false' como string
+        is_admin = request.form.get('is_admin')
         password = request.form.get('password')
 
         try:
-            # Convertir is_admin a booleano
             is_admin = is_admin.lower() == 'true'
-
-            # Crear el payload para enviar a la API
             payload = {
                 'id': id_empleado,
                 'nombre': nombre,
                 'email': email,
                 'is_admin': is_admin
             }
-
-            # Añadir la contraseña al payload solo si está presente
             if password:
                 if len(password) < 6:
                     error_message = "La contraseña debe tener al menos 6 caracteres."
                     return render_template('editar-empleado.html', error_message=error_message)
                 payload['password'] = password
-
-            # Imprimir el payload para depuración
             print(f"Payload enviado a la API para editar: {payload}")
 
-            # Llamar a la API para actualizar el empleado
             response = api_client.put('empleados/updateEmpleado', json=payload)
 
             if response:
@@ -290,11 +262,9 @@ def modificar_empleado(id_empleado):
             return "Error al procesar la solicitud", 500
 
     try:
-        # Obtener todos los empleados desde la API
         print("Obteniendo todos los empleados para buscar por ID...")
         response = api_client.get('empleados/getEmpleados')
 
-        # Buscar el empleado por ID
         if response and 'data' in response:
             empleados = response['data']
             empleado_data = next((emp for emp in empleados if emp['id'] == id_empleado), None)
@@ -319,14 +289,11 @@ def modificar_empleado(id_empleado):
 @login_required
 def eliminar_empleado(id_empleado):
     try:
-        # Crear el payload con el ID del empleado
         payload = {'id': id_empleado}
-        print(f"Payload enviado a la API para eliminar: {payload}")  # Depuración
+        print(f"Payload enviado a la API para eliminar: {payload}")
 
-        # Llamar a la API para eliminar el empleado
         response = api_client.delete('empleados/deleteEmpleado', json=payload)
 
-        # Verificar si la respuesta es válida
         if response and response.get('message') == 'Empleado eliminado con éxito':
             print("Empleado eliminado correctamente.")
             return redirect(url_for('empleados', mensaje="Empleado eliminado con éxito"))
@@ -344,94 +311,67 @@ def eliminar_empleado(id_empleado):
 @login_required
 def pedidos():
     pedidos_list = []
-    error_message = None
-
     try:
-        # Usa el nuevo endpoint para obtener todos los pedidos
-        response = api_client.get('pedidos/getAllPedidos')
-        if isinstance(response, list):
-            for pedido in response:
+        pedidos_ref = db.collection('pedidos')
+        snapshot = pedidos_ref.stream()
 
-                fecha_solicitud = pedido.get('fecha_solicitud')
-                if fecha_solicitud and '_seconds' in fecha_solicitud:
-                    from datetime import datetime
-                    timestamp = datetime.fromtimestamp(fecha_solicitud['_seconds'])
-                    pedido['createdAt'] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        for doc in snapshot:
+            pedido = doc.to_dict()
+            pedido['id'] = doc.id
+            fecha_solicitud = pedido.get('fecha_solicitud')
+
+            if fecha_solicitud:
+                from datetime import datetime
+                if isinstance(fecha_solicitud, datetime):
+                    timestamp = fecha_solicitud
+                elif hasattr(fecha_solicitud, 'seconds'):
+                    timestamp = datetime.fromtimestamp(fecha_solicitud.seconds)
                 else:
-                    pedido['createdAt'] = 'No disponible'
+                    timestamp = None
 
-                pedido['status'] = 'Entregado' if pedido.get('is_entregado', False) else 'No Entregado'
+                pedido['createdAt'] = timestamp.strftime('%Y-%m-%d %H:%M:%S') if timestamp else 'No disponible'
+            else:
+                pedido['createdAt'] = 'No disponible'
 
-                # Formatear los items (producto_id)
-                pedido['prod'] = pedido.get('producto_id', 'No especificado')
+            pedido['status'] = 'Entregado' if pedido.get('is_entregado', False) else 'No Entregado'
+            pedido['prod'] = pedido.get('producto_id', 'No especificado')
+            pedido['userId'] = pedido.get('usuario_id', 'No especificado')
 
-                pedido['userId'] = pedido.get('usuario_id', 'No especificado')
+            pedidos_list.append(pedido)
 
-                pedidos_list.append(pedido)
-        else:
-            error_message = "Error inesperado al obtener los pedidos."
+        print(f"Pedidos obtenidos: {pedidos_list}")
     except Exception as e:
-        error_message = f"Error al obtener los pedidos: {e}"
-        print(error_message)
+        print(f"Error al obtener pedidos: {e}")
+
+    return render_template('tb-pedido.html', pedidos=pedidos_list, is_admin=session.get('is_admin', False))
 
 
-    return render_template('tb-pedido.html', pedidos=pedidos_list, error_message=error_message)
-
-
-import locale
-from datetime import datetime
-
-@app.route('/modificar_pedido/<string:id_pedido>', methods=['GET', 'POST'])
+@app.route('/modificar_pedido/<id_pedido>', methods=['GET', 'POST'])
 @login_required
 def modificar_pedido(id_pedido):
-    if request.method == 'POST':
-        # Capturar datos del formulario
-        status = request.form.get('status')
-        is_entregado = status == 'Entregado'
-        print(f"Datos enviados desde el formulario: is_entregado={is_entregado}")
-
-        try:
-
-            pedido_ref = db.collection('pedidos').document(id_pedido)
-            pedido_doc = pedido_ref.get()
-
-            if not pedido_doc.exists:
-                print(f"Pedido con ID {id_pedido} no encontrado.")
-                return "Pedido no encontrado", 404
-
-
-            update_data = {
-                'is_entregado': is_entregado,
-                'fecha_entrega': firestore.SERVER_TIMESTAMP if is_entregado else None
-            }
-            pedido_ref.update(update_data)
-            print(f"Pedido {id_pedido} actualizado con éxito en Firestore.")
-
-            return redirect(url_for('pedidos'))
-        except Exception as e:
-            print(f"Error al actualizar el pedido: {e}")
-            return "Error al actualizar el pedido", 500
-
     try:
-        pedido_ref = db.collection('pedidos').document(id_pedido)
-        pedido_doc = pedido_ref.get()
+        if request.method == 'POST':
+            data = {
+                "direccion": request.form.get('direccion'),
+                "producto_id": request.form.get('producto_id'),
+                "is_entregado": request.form.get('is_entregado') == 'true'
+            }
 
-        if not pedido_doc.exists:
-            print(f"Pedido con ID {id_pedido} no encontrado.")
+            print(f"Datos recibidos para actualizar el pedido {id_pedido}: {data}")
+
+            db.collection('pedidos').document(id_pedido).update(data)
+            return redirect(url_for('pedidos'))
+
+        pedido_doc = db.collection('pedidos').document(id_pedido).get()
+        if pedido_doc.exists:
+            pedido = pedido_doc.to_dict()
+            return render_template('editar-pedido.html', pedido=pedido, id_pedido=id_pedido)
+        else:
             return "Pedido no encontrado", 404
-
-        pedido_data = pedido_doc.to_dict()
-        # Formatear fechas para mostrar en el template
-        if 'fecha_solicitud' in pedido_data and pedido_data['fecha_solicitud']:
-            pedido_data['fecha_solicitud'] = pedido_data['fecha_solicitud'].strftime('%Y-%m-%d %H:%M:%S')
-
-        if 'fecha_entrega' in pedido_data and pedido_data['fecha_entrega']:
-            pedido_data['fecha_entrega'] = pedido_data['fecha_entrega'].strftime('%Y-%m-%d %H:%M:%S')
-
-        return render_template('editar-pedido.html', pedido=pedido_data, id_pedido=id_pedido)
     except Exception as e:
-        print(f"Error al obtener el pedido: {e}")
-        return "Error interno al obtener el pedido", 500
+        print(f"Error al modificar el pedido: {e}")
+        return "Error interno del servidor", 500
+
 
 
 @app.route('/eliminar_pedido/<string:id_pedido>', methods=['POST'])
@@ -454,9 +394,8 @@ def productos():
     productos = []
 
     try:
-        # Obtén los productos desde Firestore
         productos_data = db.collection('productos').stream()
-        productos = [{'id': doc.id, **doc.to_dict()} for doc in productos_data]  # Asegúrate de incluir 'id'
+        productos = [{'id': doc.id, **doc.to_dict()} for doc in productos_data]
     except Exception as e:
         error_message = f"Error al obtener los productos: {e}"
         print(error_message)
@@ -479,11 +418,10 @@ def agregar_producto():
                 error_message = "Todos los campos obligatorios deben completarse."
                 raise ValueError(error_message)
 
-            # Validar y convertir imagen
             filename, ext = os.path.splitext(imagen.filename)
             ext = ext.lower()
             if ext not in ['.png', '.jpg', '.jpeg']:
-                ext = '.png'  # Por defecto PNG si el formato no es compatible
+                ext = '.png'
             converted_filename = f"{filename}{ext}"
 
             image = Image.open(imagen)
@@ -491,13 +429,11 @@ def agregar_producto():
             image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
             image_io.seek(0)
 
-            # Subir imagen al bucket
             blob = bucket.blob(f"productos/{converted_filename}")
             blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
-            blob.make_public()  # Hacer la URL pública
+            blob.make_public()
             imagen_url = blob.public_url
 
-            # Guardar datos del producto en Firestore
             producto_data = {
                 'titulo': titulo,
                 'descripcion': descripcion,
@@ -514,9 +450,6 @@ def agregar_producto():
             print(error_message)
 
     return render_template('agregar-producto.html', error_message=error_message)
-
-
-
 
 
 @app.route('/modificar_producto/<string:id_producto>', methods=['GET', 'POST'])
@@ -541,34 +474,29 @@ def modificar_producto(id_producto):
                 'ult_actualizacion': datetime.utcnow()
             }
 
-            # Procesar imagen si se sube una nueva
             if imagen:
                 filename, ext = os.path.splitext(imagen.filename)
                 ext = ext.lower()
                 if ext not in ['.png', '.jpg', '.jpeg']:
-                    ext = '.png'  # Por defecto PNG
+                    ext = '.png'
                 converted_filename = f"{filename}{ext}"
 
-                # Leer y convertir la imagen
                 image = Image.open(imagen)
                 image_io = io.BytesIO()
                 image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
                 image_io.seek(0)
 
-                # Subir la imagen al bucket de Firebase Storage
                 blob = bucket.blob(f"productos/{converted_filename}")
                 blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
-                blob.make_public()  # Hacer la URL pública
+                blob.make_public()
                 updates['imagen'] = blob.public_url
 
-            # Actualizar datos en Firestore
             producto_ref.update(updates)
             return redirect(url_for('productos'))
         except Exception as e:
             error_message = f"Error al actualizar el producto: {str(e)}"
             print(error_message)
 
-    # Obtener datos actuales del producto
     producto = producto_ref.get()
     if producto.exists:
         producto_data = {'id': producto_ref.id, **producto.to_dict()}
@@ -599,10 +527,8 @@ def upload_image():
 @login_required
 def eliminar_producto(id_producto):
     try:
-        # Referencia al documento del producto en Firestore
         producto_ref = db.collection('productos').document(id_producto)
 
-        # Eliminar el producto
         producto_ref.delete()
         print(f"Producto {id_producto} eliminado de Firestore.")
         return redirect(url_for('productos'))
@@ -619,10 +545,8 @@ def dispositivos():
     dispositivos = []
 
     try:
-        # Llama a la API para obtener dispositivos
         response = api_client.get('dispositivos/getAllDispositivos')
 
-        # Verifica si la respuesta es una lista directamente
         if isinstance(response, list):
             dispositivos = response
         else:
@@ -630,7 +554,6 @@ def dispositivos():
     except Exception as e:
         error_message = f"Error al obtener dispositivos: {str(e)}"
 
-    # Renderiza el template con los datos
     return render_template('tb-dispositivo.html', dispositivos=dispositivos, error_message=error_message)
 
 
@@ -660,7 +583,6 @@ def agregar_dispositivo():
             except Exception as e:
                 error_message = f"Error al agregar el dispositivo: {str(e)}"
 
-    # Obtener productos para el formulario
     productos_query = db.collection('productos').stream()
     productos = [{'id': doc.id, 'titulo': doc.to_dict().get('titulo')} for doc in productos_query]
 
@@ -676,15 +598,11 @@ def modificar_dispositivo(id_dispositivo):
     if request.method == 'POST':
         numero_telefonico = request.form.get('numero_telefonico')
         plan_id = request.form.get('plan_id')
-
-        # Crear un diccionario solo con los campos modificados
         updated_data = {}
         if numero_telefonico:
             updated_data['numero_telefonico'] = numero_telefonico
         if plan_id and plan_id != "N/A":
             updated_data['plan_id'] = plan_id
-
-        # Validar que al menos un campo se actualice
         if not updated_data:
             error_message = "No se detectaron cambios para actualizar."
         else:
@@ -694,17 +612,14 @@ def modificar_dispositivo(id_dispositivo):
             }
 
             try:
-                # Usar el endpoint de la API para actualizar el dispositivo
                 response = api_client.put('dispositivos/updateDispositivo', json=payload)
                 if response and response.get('message') == 'Dispositivo actualizado exitosamente':
-                    # Redirigir a la lista de dispositivos
                     return redirect(url_for('dispositivos'))
                 else:
                     error_message = response.get('message', 'Error al actualizar el dispositivo.')
             except Exception as e:
                 error_message = f"Error al actualizar el dispositivo: {str(e)}"
 
-    # Si no es POST, obtener datos del dispositivo
     try:
         response = api_client.get('dispositivos/getAllDispositivos')
         if response:
@@ -712,11 +627,8 @@ def modificar_dispositivo(id_dispositivo):
             dispositivo = next((d for d in dispositivos if d['id'] == id_dispositivo), None)
 
             if dispositivo:
-                # Obtener información de los usuarios invitados y el usuario principal
                 usuarios_invitados = dispositivo.get('usuarios_invitados', [])
                 usuario_id = dispositivo.get('usuario_id')
-
-                # Consultar información de los usuarios invitados
                 emails_invitados = []
                 for user_id in usuarios_invitados:
                     user_response = api_client.get(f'usuarios/{user_id}')
@@ -726,8 +638,6 @@ def modificar_dispositivo(id_dispositivo):
                         emails_invitados.append(f"Usuario ID {user_id} no disponible")
 
                 dispositivo['usuarios_invitados'] = emails_invitados
-
-                # Consultar información del usuario principal
                 if usuario_id:
                     user_response = api_client.get(f'usuarios/{usuario_id}')
                     dispositivo['usuario_id'] = user_response.get('correo', 'Correo no disponible')
@@ -745,14 +655,11 @@ def modificar_dispositivo(id_dispositivo):
 @login_required
 def eliminar_dispositivo(id_dispositivo):
     try:
-        # Crear el payload con el ID del dispositivo
         payload = {'deviceId': id_dispositivo}
-        print(f"Payload enviado a la API para eliminar: {payload}")  # Depuración
+        print(f"Payload enviado a la API para eliminar: {payload}")
 
-        # Llamar a la API para eliminar el dispositivo
         response = api_client.delete('dispositivos/deleteDispositivo', json=payload)
 
-        # Verificar si la respuesta es válida
         if response and response.get('message') == 'Dispositivo eliminado exitosamente':
             print("Dispositivo eliminado correctamente.")
             return redirect(url_for('dispositivos'))
@@ -794,25 +701,20 @@ def agregar_plan():
             if not all([nombre, precio, descripcion, refresco, cantidad_compartidos, imagen]):
                 raise ValueError("Todos los campos son obligatorios.")
 
-            # Validar y convertir imagen
             filename, ext = os.path.splitext(imagen.filename)
             ext = ext.lower()
             if ext not in ['.png', '.jpg', '.jpeg']:
-                ext = '.png'  # Por defecto PNG si el formato no es compatible
+                ext = '.png'
             converted_filename = f"planes/{filename}{ext}"
 
             image = Image.open(imagen)
             image_io = io.BytesIO()
             image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
             image_io.seek(0)
-
-            # Subir imagen al bucket
             blob = bucket.blob(converted_filename)
             blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
-            blob.make_public()  # Hacer la URL pública
+            blob.make_public()
             imagen_url = blob.public_url
-
-            # Guardar datos del plan en Firestore
             plan_data = {
                 'nombre': nombre,
                 'precio': precio,
@@ -855,34 +757,27 @@ def modificar_plan(id_plan):
                 'cantidad_compartidos': cantidad_compartidos,
                 'ult_actualizacion': datetime.utcnow()
             }
-
-            # Procesar nueva imagen si se sube
             if imagen:
                 filename, ext = os.path.splitext(imagen.filename)
                 ext = ext.lower()
                 if ext not in ['.png', '.jpg', '.jpeg']:
-                    ext = '.png'  # Por defecto PNG
+                    ext = '.png'
                 converted_filename = f"planes/{filename}{ext}"
 
                 image = Image.open(imagen)
                 image_io = io.BytesIO()
                 image.save(image_io, format='PNG' if ext == '.png' else 'JPEG')
                 image_io.seek(0)
-
-                # Subir imagen al bucket
                 blob = bucket.blob(converted_filename)
                 blob.upload_from_file(image_io, content_type=f"image/{'png' if ext == '.png' else 'jpeg'}")
-                blob.make_public()  # Hacer la URL pública
+                blob.make_public()
                 updates['imagen'] = blob.public_url
-
-            # Actualizar datos en Firestore
             plan_ref.update(updates)
             return redirect(url_for('planes', mensaje="Plan actualizado con éxito"))
         except Exception as e:
             error_message = f"Error al actualizar el plan: {e}"
             print(error_message)
 
-    # Obtener datos del plan para editar
     plan = plan_ref.get()
     if plan.exists:
         plan_data = {'id': plan_ref.id, **plan.to_dict()}
@@ -932,7 +827,7 @@ def agregar_tiponotificacion():
                 raise ValueError("Todos los campos son obligatorios.")
 
             payload = {
-                'id_tipo_notificacion': str(datetime.utcnow().timestamp()),  # Generar un ID único
+                'id_tipo_notificacion': str(datetime.utcnow().timestamp()),
                 'tipo': tipo,
                 'mensaje_plantilla': mensaje_plantilla,
             }
@@ -945,8 +840,6 @@ def agregar_tiponotificacion():
         except Exception as e:
             print(f"Error al agregar tipo de notificación: {e}")
     return render_template('agregar-tiponotificaciones.html')
-
-
 
 
 @app.route('/tiponotificaciones/editar/<string:id_tipo>', methods=['GET', 'POST'])
@@ -974,7 +867,6 @@ def editar_tiponotificacion(id_tipo):
         except Exception as e:
             print(f"Error al editar tipo de notificación: {e}")
 
-    # Obtener datos del tipo de notificación para prellenar el formulario
     response = api_client.get('notificaciones/getTiposNotificaciones')
     tipo = next((t for t in response if t['id'] == id_tipo), None) if response else None
     return render_template('editar-tiponotificaciones.html', tipo=tipo)
@@ -996,13 +888,9 @@ def eliminar_tiponotificacion(id_tipo):
         return redirect(url_for('tiponotificaciones', mensaje="Error interno del servidor."))
 
 
-
-
-
 @app.template_filter('timestamp_to_datetime')
 def timestamp_to_datetime(value):
     try:
-        # Convertir segundos a un objeto datetime
         return datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
     except Exception:
         return "N/A"
